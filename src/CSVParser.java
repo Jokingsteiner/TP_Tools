@@ -11,9 +11,9 @@ public class CSVParser {
 
     private String filePath = null;
     private String splitBy = ",";
-    private LinkedList<Integer[]> result = new LinkedList<Integer[]>();
+    private LinkedList<Integer[]> result = new LinkedList<>();
 
-    public CSVParser () {}
+    public CSVParser() {}
 
     public CSVParser (String filePath) {
         this.filePath = filePath;
@@ -41,15 +41,15 @@ public class CSVParser {
     }
 
     public LinkedList<Integer[]> parse() {
-        result = new LinkedList<Integer[]>();
+        result = new LinkedList<>();
         if (this.filePath != null) {
             FileReaderWBuffer fb = new FileReaderWBuffer(this.filePath);
             // the first line is the attribute names, abandon
             fb.readLine();
-            String line = null;
+            String line;
             while ((line = fb.readLine()) != null) {
                 String[] splitLine = line.split(splitBy);
-                ArrayList<Integer> splitNum = new ArrayList<Integer>();
+                ArrayList<Integer> splitNum = new ArrayList<>();
                 for (String s: splitLine)
                     splitNum.add(Integer.valueOf(s));
                 result.add(splitNum.toArray(new Integer[splitNum.size()]));

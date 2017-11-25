@@ -1,5 +1,6 @@
 /**
  * Created by cjk98 on 11/20/2017.
+ * CustomEdge data structure with weight
  */
 public class CustomEdge {
     private int sourceNode;
