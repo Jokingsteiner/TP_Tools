@@ -14,6 +14,7 @@ import java.util.LinkedList;
 public class EdgeDisjointPath {
     private Graph<Integer, CustomEdge> mg = new DirectedSparseGraph<>();
     private int maxNodeID = Integer.MIN_VALUE;
+    private int minNodeID = Integer.MAX_VALUE;
     LinkedList<Integer[]> rawGraph = new LinkedList<>();
 
     EdgeDisjointPath (LinkedList<Integer[]> rawGraph) {
@@ -26,6 +27,8 @@ public class EdgeDisjointPath {
         for (Integer[] item : rawGraph) {
             if (Math.max(item[0], item[1]) > maxNodeID)
                 maxNodeID = Math.max(item[0], item[1]);
+            if (Math.min(item[0], item[1]) < minNodeID)
+                minNodeID = Math.min(item[0], item[1]);
             CustomEdge edge = new CustomEdge(item[0], item[1], item[2]);
             cg.addVertex(item[0]);
             cg.addVertex(item[1]);
@@ -34,9 +37,13 @@ public class EdgeDisjointPath {
         return cg;
     }
 
-    public ArrayList<LinkedList<Integer>> findEdjPaths(Graph<Integer, CustomEdge> tg, int s, int t) {
+    public ArrayList<LinkedList<Integer>> findEdjPaths(Graph<Integer, CustomEdge> tg, Integer s, Integer t) {
         if (tg == null)
             tg = createGraph(rawGraph);
+        if (s == null)
+            s = minNodeID;
+        if (t == null)
+            t = maxNodeID;
 
         ArrayList<LinkedList<Integer>> pathSet = new ArrayList<>();
         LinkedList<Integer> tempPath;
@@ -52,11 +59,17 @@ public class EdgeDisjointPath {
         return pathSet;
     }
 
-    public ArrayList<LinkedList<Integer>> findMaxEdjPaths(Graph<Integer, CustomEdge> tg, int s, int t) {
-        int maxflow = 0;
-        //  Ford-Fulkerson Algorithm
+    public ArrayList<LinkedList<Integer>> findMaxEdjPaths(Graph<Integer, CustomEdge> tg, Integer s, Integer t) {
+        //  Modified Ford-Fulkerson Algorithm
         if (tg == null)
             tg = createGraph(rawGraph);
+
+        if (s == null)
+            s = minNodeID;
+        if (t == null)
+            t = maxNodeID;
+
+        int maxflow = 0;
         Graph<Integer, CustomEdge> rg = createGraph(rawGraph);
         HashMap<Pair<Integer, Integer>, Boolean> conflictEdges = new HashMap<>();
 
@@ -147,8 +160,9 @@ public class EdgeDisjointPath {
                         }
                     }
                 }
-                pathSet.add(newPath1);
                 pathSet.add(newPath2);
+                solveConflict(tg, rg, pathSet, newPath1);
+//                pathSet.add(newPath1);
                 break;
             }
         }
@@ -188,10 +202,10 @@ public class EdgeDisjointPath {
     }
 
     public static void main(String[] args){
-        CSVParser cp = new CSVParser("F:\\Users\\OneDrive\\Documents\\UCI\\EECS 221 Adv Data Know\\Projects\\Term_Project\\Data\\input_special.csv");
+        CSVParser cp = new CSVParser("F:\\Users\\OneDrive\\Documents\\UCI\\EECS 221 Adv Data Know\\Projects\\Term_Project\\Data\\input_special2.csv");
         LinkedList<Integer[]> rawGraph = cp.parse();
         EdgeDisjointPath edp = new EdgeDisjointPath(rawGraph);
-        ArrayList<LinkedList<Integer>> hlPaths = edp.findMaxEdjPaths(null, 1, 6);
+        ArrayList<LinkedList<Integer>> hlPaths = edp.findMaxEdjPaths(null, null, null);
         for (LinkedList<Integer> ll: hlPaths) {
             for (Integer i: ll)
                 System.out.print(i + " ");
