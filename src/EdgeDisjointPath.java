@@ -1,7 +1,6 @@
 import edu.uci.ics.jung.graph.DirectedSparseGraph;
 import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.graph.util.EdgeType;
-import javafx.util.Pair;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,7 +52,6 @@ public class EdgeDisjointPath {
             for (int i = 0; i < pathArray.length - 1; ++i) {
                 CustomEdge fe = tg.findEdge(pathArray[i], pathArray[i+1]);
                 tg.removeEdge(fe);
-//                tg.addEdge(new CustomEdge(pathArray[i+1], pathArray[i], fe.getWeight()), pathArray[i+1], pathArray[i], EdgeType.DIRECTED);
             }
         }
         return pathSet;
@@ -71,7 +69,6 @@ public class EdgeDisjointPath {
 
         int maxflow = 0;
         Graph<Integer, CustomEdge> rg = createGraph(rawGraph);
-        HashMap<Pair<Integer, Integer>, Boolean> conflictEdges = new HashMap<>();
 
         ArrayList<LinkedList<Integer>> pathSet = new ArrayList<>();
         LinkedList<Integer> tempPath;
@@ -98,40 +95,38 @@ public class EdgeDisjointPath {
                     re.setCapacity(re.getCapacity() + pathFlow);
                 else
                     rg.addEdge(new CustomEdge(pathArray[i+1], pathArray[i], pathFlow), pathArray[i+1], pathArray[i], EdgeType.DIRECTED);
-
-//                Pair<Integer, Integer> edgePair = new Pair<>(Math.min(pathArray[i], pathArray[i+1]), Math.max(pathArray[i], pathArray[i+1]));
-                // if contains then assign true, else false;
-//                conflictEdges.put(edgePair, conflictEdges.containsKey(edgePair));
             }
+
             maxflow += pathFlow;
-//            pathSet.add(tempPath);
             solveConflict(tg, rg, pathSet, tempPath);
+//            drawServer.saveGraph(rg, "F:\\Users\\OneDrive\\Documents\\UCI\\EECS 221 Adv Data Know\\Projects\\Term_Project\\residual\\" + ++count + ".png");
         }
 
         System.out.println("Maximum number of edge-disjoint path: " + maxflow);
-//        for (Pair<Integer, Integer> p: conflictEdges.keySet())
-
         return pathSet;
     }
 
     private void solveConflict(Graph<Integer, CustomEdge> tg, Graph<Integer, CustomEdge> rg, ArrayList<LinkedList<Integer>> pathSet,  LinkedList<Integer> tempPath) {
-        System.out.println("path in the set: ");
-        for (LinkedList<Integer> ll: pathSet) {
-            for (Integer i: ll)
-                System.out.print(i + " ");
-            System.out.println();
-        }
-        System.out.println("new path to add: ");
-        for (Integer i: tempPath    )
-            System.out.print(i + " ");
-        System.out.println();
+        cancleLoop(tempPath);
+//        System.out.println("path in the set: ");
+//        for (LinkedList<Integer> ll: pathSet) {
+//            for (Integer i: ll)
+//                System.out.print(i + " ");
+//            System.out.println();
+//        }
+//        System.out.println("new path to add: ");
+//        for (Integer i: tempPath)
+//            System.out.print(i + " ");
+//        System.out.println();
         boolean noConflict = true;
         for (int i = 0; i < tempPath.size() - 2; ++i) {
             Integer tempStart = tempPath.get(i);
             Integer tempEnd = tempPath.get(i+1);
             CustomEdge eInOrg = tg.findEdge(tempStart, tempEnd);
+            CustomEdge eInRes = rg.findEdge(tempStart, tempEnd);
+
             // the edge not existed in original graph, so it is a push back in the residual graph
-            if (eInOrg == null) {
+            if (eInOrg == null || eInRes != null) {
                 LinkedList<Integer> newPath1 = new LinkedList<>();
                 LinkedList<Integer> newPath2 = new LinkedList<>();
                 for (int j = 0; j < pathSet.size(); ++j) {
@@ -170,13 +165,35 @@ public class EdgeDisjointPath {
             pathSet.add(tempPath);
     }
 
+    private LinkedList<Integer> cancleLoop(LinkedList<Integer> tempPath) {
+        int removeStart, removeEnd;
+        HashMap<Integer, Integer> checkSet = new HashMap<>();
+        boolean noLoop = true;
+//        LinkedList<Integer> result = new LinkedList<>();
+        for (int i = 0; i < tempPath.size(); ++i) {
+            if (checkSet.containsKey(tempPath.get(i))) {
+                noLoop &= false;
+                removeStart = checkSet.get(tempPath.get(i));
+                removeEnd = i;
+                int delNum = removeEnd - removeStart;
+                for (int tmp = 0; tmp < delNum; ++tmp)
+                    tempPath.remove(removeStart+1);
+            }
+            else
+                checkSet.put(tempPath.get(i), i);
+        }
+        if(noLoop)
+            return tempPath;
+        return cancleLoop(tempPath);
+    }
+
     private LinkedList<Integer> findAPath(Graph<Integer, CustomEdge> tg, int s, int t) {
         boolean visited[] = new boolean[Math.max(tg.getVertexCount(), maxNodeID)];
         LinkedList<Integer> path = new LinkedList<>();
 
         dfsSearch(tg, s, t, visited, path);
-        if (path.size() == 0)
-            System.out.println("There is no more path from " + s + " to " + t);
+//        if (path.size() == 0)
+//            System.out.println("There is no more path from " + s + " to " + t);
         return path;
     }
 
@@ -202,7 +219,7 @@ public class EdgeDisjointPath {
     }
 
     public static void main(String[] args){
-        CSVParser cp = new CSVParser("F:\\Users\\OneDrive\\Documents\\UCI\\EECS 221 Adv Data Know\\Projects\\Term_Project\\Data\\input_special2.csv");
+        CSVParser cp = new CSVParser("F:\\Users\\OneDrive\\Documents\\UCI\\EECS 221 Adv Data Know\\Projects\\Term_Project\\Data\\input_sample.csv");
         LinkedList<Integer[]> rawGraph = cp.parse();
         EdgeDisjointPath edp = new EdgeDisjointPath(rawGraph);
         ArrayList<LinkedList<Integer>> hlPaths = edp.findMaxEdjPaths(null, null, null);
