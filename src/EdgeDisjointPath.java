@@ -235,6 +235,55 @@ public class EdgeDisjointPath {
      *  Solver for the Variation3:
      *  Find a set with maximum number of edge-disjoint paths and minimize the total cost at the same time.
      **/
+    public ArrayList<LinkedList<Integer>> findMinCostMaxEdjPaths(Graph<Integer, CustomEdge> tg, Integer s, Integer t) {
+        //  Modified Ford-Fulkerson Algorithm
+        if (tg == null)
+            tg = createGraph(rawGraph);
+
+        if (s == null)
+            s = minNodeID;
+        if (t == null)
+            t = maxNodeID;
+
+        int maxflow = 0;
+        Graph<Integer, CustomEdge> rg = createGraph(rawGraph);
+
+        ArrayList<LinkedList<Integer>> pathSet = new ArrayList<>();
+        LinkedList<Integer> tempPath;
+        while ((tempPath = findADijkPath(rg, s, t)).size() != 0) {
+            Integer[] pathArray = tempPath.toArray(new Integer[tempPath.size()]);
+            // maybe there's a case all edges in residual graph are > 1, so pathFlow is necessary
+            int pathFlow = Integer.MAX_VALUE;
+            for (int i = 0; i < pathArray.length - 1; ++i) {
+                CustomEdge e = rg.findEdge(pathArray[i], pathArray[i+1]);
+                pathFlow = Math.min(pathFlow, e.getCapacity());
+            }
+
+            for (int i = 0; i < pathArray.length - 1; ++i) {
+                // reduce capacity on the
+                CustomEdge fe = rg.findEdge(pathArray[i], pathArray[i+1]);
+                if (fe.getCapacity() - pathFlow > 0)
+                    fe.setCapacity(fe.getCapacity() - pathFlow);
+                else
+                    rg.removeEdge(fe);
+
+                // add capacity to the reversed edge
+                CustomEdge re = rg.findEdge(pathArray[i+1], pathArray[i]);
+                if (re != null)
+                    re.setCapacity(re.getCapacity() + pathFlow);
+                else
+                    rg.addEdge(new CustomEdge(pathArray[i+1], pathArray[i], pathFlow), pathArray[i+1], pathArray[i], EdgeType.DIRECTED);
+            }
+
+            maxflow += pathFlow;
+            solveConflict(tg, rg, pathSet, tempPath);
+        }
+
+        System.out.println("Maximum number of edge-disjoint path: " + maxflow);
+        return pathSet;
+    }
+
+
     private ArrayList<LinkedList<Integer>> findAllDijkPaths(Graph<Integer, CustomEdge> tg, Integer s) {
         if (tg == null)
             tg = createGraph(rawGraph);
@@ -263,17 +312,12 @@ public class EdgeDisjointPath {
             s = minNodeID;
         if (t == null)
             t = maxNodeID;
-        if(!tg.containsVertex(t))
-            return null;
         LinkedList<Integer> path = new LinkedList<>();
         int parent[] = getDijkstraParents(tg, s);
         tracebackDijk(parent, t, path);
-        if (path.size() != 0) {
+        if (path.size() != 0)
             path.addFirst(s);
-            return path;
-        }
-        else
-            return null;
+        return path;
     }
 
     private int[] getDijkstraParents(Graph<Integer, CustomEdge> tg, Integer src) {
@@ -283,6 +327,8 @@ public class EdgeDisjointPath {
         int parent[] = new int[arrayLimit];
 
         for (int i = 0; i < arrayLimit; ++i) {
+            if (i!= 0)
+                parent[i] = -2;
             dist[i] = Integer.MAX_VALUE;
             finalize[i] = false;
         }
@@ -292,15 +338,18 @@ public class EdgeDisjointPath {
         for (int nodeIdx = minNodeID-1; nodeIdx < arrayLimit - 1; ++nodeIdx) {
             int pickedIdx = getMinDistNodeIdx(tg, dist, finalize);
             int pickedNode = pickedIdx + 1;
-            finalize[pickedIdx] = true;
 
-            // update the distance of all adjacent nodes in every run
-            for (Integer adjNode: tg.getSuccessors(pickedNode)) {
-                int adjNodeIdx = adjNode - 1;
-                int edgeWeight = tg.findEdge(pickedNode, adjNode).getWeight();
-                if (!finalize[adjNodeIdx] && (dist[pickedIdx] + edgeWeight < dist[adjNodeIdx])) {
-                    parent[adjNodeIdx] = pickedIdx;
-                    dist[adjNodeIdx] = dist[pickedIdx] + edgeWeight;
+            if (pickedIdx != -1) {
+                finalize[pickedIdx] = true;
+
+                // update the distance of all adjacent nodes in every run
+                for (Integer adjNode : tg.getSuccessors(pickedNode)) {
+                    int adjNodeIdx = adjNode - 1;
+                    int edgeWeight = tg.findEdge(pickedNode, adjNode).getWeight();
+                    if (!finalize[adjNodeIdx] && (dist[pickedIdx] + edgeWeight < dist[adjNodeIdx])) {
+                        parent[adjNodeIdx] = pickedIdx;
+                        dist[adjNodeIdx] = dist[pickedIdx] + edgeWeight;
+                    }
                 }
             }
         }
@@ -324,10 +373,29 @@ public class EdgeDisjointPath {
 
     private void tracebackDijk(int [] parent, Integer nodeID, LinkedList<Integer> path) {
         // traced to the 0 (not existed node head)
-        if (parent[nodeID-1] == -1)
+        if (parent[nodeID-1] <= -1)
             return;
         tracebackDijk(parent, parent[nodeID-1]+1, path);
         path.add(nodeID);
+    }
+
+    public int getPathSetCost(Graph<Integer, CustomEdge> tg, ArrayList<LinkedList<Integer>> pathSet) {
+        if (tg == null)
+            tg = createGraph(rawGraph);
+        int cost = 0;
+        for (LinkedList<Integer> path: pathSet)
+            cost += getPathCost(tg, path);
+        return cost;
+    }
+
+    public int getPathCost(Graph<Integer, CustomEdge> tg, LinkedList<Integer> path) {
+        if (tg == null)
+            tg = createGraph(rawGraph);
+        int cost = 0;
+        for (int i = 0; i < path.size() - 1; ++i) {
+            cost+= tg.findEdge(path.get(i), path.get(i+1)).getWeight();
+        }
+        return cost;
     }
 
     public static void main(String[] args){
@@ -335,24 +403,22 @@ public class EdgeDisjointPath {
         LinkedList<Integer[]> rawGraph = cp.parse();
         EdgeDisjointPath edp = new EdgeDisjointPath(rawGraph);
 //        ArrayList<LinkedList<Integer>> hlPaths = edp.findEdjPaths(null, null, null);
-//        ArrayList<LinkedList<Integer>> hlPaths = edp.findMaxEdjPaths(null, null, null);
-
-        ArrayList<LinkedList<Integer>> hlPaths = edp.findAllDijkPaths(null, null);
-        /*
-        // find shortest paths node by node;
-        ArrayList<LinkedList<Integer>> hlPaths = new ArrayList<>();
-        for (int i = 1; i <= 10; ++i) {
-            LinkedList<Integer> path = edp.findADijkPath(null, null, i);
-            if (path!= null)
-                hlPaths.add(path);
-        }
-        */
+        ArrayList<LinkedList<Integer>> hlPaths = edp.findMaxEdjPaths(null, null, null);
+//        ArrayList<LinkedList<Integer>> hlPaths = edp.findAllDijkPaths(null, null);
+        System.out.println("Path total cost: " + edp.getPathSetCost(null, hlPaths));
         for (LinkedList<Integer> ll: hlPaths) {
             for (Integer i: ll)
                 System.out.print(i + " ");
             System.out.println();
         }
 
+        ArrayList<LinkedList<Integer>> hlPaths1 = edp.findMinCostMaxEdjPaths(null, null, null);
+        System.out.println("Path total cost: " + edp.getPathSetCost(null, hlPaths1));
+        for (LinkedList<Integer> ll: hlPaths1) {
+            for (Integer i: ll)
+                System.out.print(i + " ");
+            System.out.println();
+        }
         GraphVisualizer gv = new GraphVisualizer();
         Graph<Integer, CustomEdge> g = gv.createGraph(rawGraph);
         gv.colorEdges(g, hlPaths);

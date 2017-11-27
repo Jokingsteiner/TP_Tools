@@ -34,6 +34,7 @@ public class GraphVisualizer {
 
     public void colorEdges(Graph<Integer, CustomEdge> tg, ArrayList<LinkedList<Integer>> hlPaths) {
         if (tg == mg) {
+            coloredEdge.clear();
             for (LinkedList<Integer> ll : hlPaths) {
                 Color pathColor = getRdmColor();
                 Integer[] pathArray = ll.toArray(new Integer[ll.size()]);
