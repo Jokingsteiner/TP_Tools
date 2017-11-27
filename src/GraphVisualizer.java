@@ -19,10 +19,11 @@ import java.util.*;
 
 public class GraphVisualizer {
 
-    private Graph<Integer, CustomEdge> mg = new DirectedSparseGraph<>();
+    private Graph<Integer, CustomEdge> mg;
     private HashMap<CustomEdge, Color> coloredEdge= new HashMap<>();
 
     public Graph<Integer, CustomEdge> createGraph(LinkedList<Integer[]> rawGraph) {
+        mg = new DirectedSparseGraph<>();
         for (Integer[] item : rawGraph) {
             CustomEdge edge = new CustomEdge(item[0], item[1], item[2]);
             mg.addVertex(item[0]);
